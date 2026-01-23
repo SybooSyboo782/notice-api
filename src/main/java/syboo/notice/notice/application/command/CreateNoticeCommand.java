@@ -1,4 +1,4 @@
-package syboo.notice.notice.application;
+package syboo.notice.notice.application.command;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
