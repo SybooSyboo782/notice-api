@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import syboo.notice.notice.api.request.CreateNoticeRequest;
@@ -21,6 +22,7 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/notices")
 @RequiredArgsConstructor
+@Validated
 public class NoticeController {
 
     private final NoticeService noticeService;
@@ -32,7 +34,8 @@ public class NoticeController {
      */
     @PostMapping
     public ResponseEntity<Long> createNotice(@RequestBody @Valid CreateNoticeRequest request) {
-        log.info("공지사항 등록 요청: title='{}', author='{}'", request.title(), request.author());
+        log.info("공지사항 등록 요청: title='{}', author='{}', hasFiles={}",
+                request.title(), request.author(), !request.attachments().isEmpty());
 
         Long noticeId = noticeService.createNotice(toCommand(request));
 
