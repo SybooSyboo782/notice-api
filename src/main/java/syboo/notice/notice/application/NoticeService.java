@@ -124,4 +124,27 @@ public class NoticeService {
             log.debug("첨부파일 교체 완료: {}개 신규 등록", attachmentCommands.size());
         }
     }
+
+    /**
+     * 공지사항을 삭제한다.
+     * <p>
+     * {@link CascadeType#ALL} 및 {@code orphanRemoval = true} 설정에 의해
+     * 해당 공지사항과 연관된 모든 첨부파일(NoticeAttachment) 데이터도 함께 삭제된다.
+     *
+     * @param noticeId 삭제할 공지사항의 식별자
+     * @throws IllegalArgumentException 존재하지 않는 ID일 경우 발생
+     */
+    public void deleteNotice(Long noticeId) {
+        log.info("공지사항 삭제 요청: id={}", noticeId);
+
+        Notice notice = noticeRepository.findById(noticeId)
+                .orElseThrow(() -> {
+                    log.error("공지사항 삭제 실패: 존재하지 않는 ID = {}", noticeId);
+                    return new IllegalArgumentException("공지사항이 존재하지 않습니다.");
+                });
+
+        noticeRepository.delete(notice);
+
+        log.info("공지사항 삭제 완료: id={}", noticeId);
+    }
 }
