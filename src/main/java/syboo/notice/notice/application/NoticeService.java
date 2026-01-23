@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import syboo.notice.notice.application.command.CreateNoticeCommand;
+import syboo.notice.notice.application.command.UpdateNoticeCommand;
 import syboo.notice.notice.domain.Notice;
 import syboo.notice.notice.domain.NoticeAttachment;
 import syboo.notice.notice.repository.NoticeRepository;

@@ -7,6 +7,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import syboo.notice.notice.application.command.CreateNoticeCommand;
+import syboo.notice.notice.application.command.UpdateNoticeCommand;
 import syboo.notice.notice.domain.Notice;
 import syboo.notice.notice.repository.NoticeRepository;
 
