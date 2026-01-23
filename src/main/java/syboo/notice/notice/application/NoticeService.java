@@ -36,6 +36,7 @@ public class NoticeService {
                 .noticeEndAt(command.getNoticeEndAt())
                 .build();
 
+        // 첨부파일 처리 (내부에서 notice.addAttachment 호출 시 hasAttachment가 true로 자동 갱신됨)
         processAttachments(command, notice);
 
         Notice savedNotice = noticeRepository.save(notice);
@@ -54,6 +55,7 @@ public class NoticeService {
         }
 
         for (CreateNoticeCommand.AttachmentCommand att : command.getAttachments()) {
+            // 추가될 때마다 hasAttachment = true 로 유지됨
             notice.addAttachment(
                     NoticeAttachment.builder()
                             .fileName(att.getFileName())
@@ -94,6 +96,7 @@ public class NoticeService {
                 command.getNoticeEndAt()
         );
 
+        // 첨부파일 교체 (removeAll 후 add 시점에 hasAttachment가 자동으로 false -> true/false로 동기화됨)
         updateAttachments(notice, command.getAttachments());
 
         log.info("공지사항 수정 완료: id={}", noticeId);
@@ -115,6 +118,7 @@ public class NoticeService {
 
         if (attachmentCommands != null && !attachmentCommands.isEmpty()) {
             for (UpdateNoticeCommand.AttachmentCommand att : attachmentCommands) {
+                // 추가될 때마다 hasAttachment = true 로 유지됨
                 notice.addAttachment(
                         NoticeAttachment.builder()
                                 .fileName(att.getFileName())

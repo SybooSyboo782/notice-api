@@ -43,6 +43,9 @@ public class Notice extends BaseEntity {
     @Column(nullable = false)
     private long viewCount = 0L;
 
+    @Column(nullable = false)
+    private boolean hasAttachment = false;
+
     @Version
     private Long version;
 
@@ -65,6 +68,7 @@ public class Notice extends BaseEntity {
         this.author = author;
         this.noticeStartAt = noticeStartAt;
         this.noticeEndAt = noticeEndAt;
+        this.hasAttachment = false;
     }
 
     public void update(
@@ -93,14 +97,24 @@ public class Notice extends BaseEntity {
     public void addAttachment(NoticeAttachment attachment) {
         attachments.add(attachment);
         attachment.assignNotice(this);
+        updateAttachmentStatus();
     }
 
     public void removeAttachment(NoticeAttachment attachment) {
         attachments.remove(attachment);
         attachment.assignNotice(null);
+        updateAttachmentStatus();
     }
 
     public void removeAllAttachments() {
         attachments.clear();
+        updateAttachmentStatus();
+    }
+
+    /**
+     * 첨부파일 리스트의 상태를 확인하여 hasAttachment 필드를 동기화한다.
+     */
+    private void updateAttachmentStatus() {
+        this.hasAttachment = !this.attachments.isEmpty();
     }
 }
