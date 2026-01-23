@@ -53,7 +53,7 @@ dependencies {
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.1'
 
     // 로깅
-    runtimeOnly group: 'org.springframework.boot', module: 'spring-boot-starter-log4j2'
+    runtimeOnly "org.springframework.boot:spring-boot-starter-log4j2"
 
     //테스트에서 lombok 사용
     testCompileOnly 'org.projectlombok:lombok'
