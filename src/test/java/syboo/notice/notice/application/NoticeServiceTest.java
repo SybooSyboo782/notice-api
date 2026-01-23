@@ -36,13 +36,17 @@ class NoticeServiceTest {
     @DisplayName("공지사항 등록 성공 - 첨부파일 포함")
     void createNotice() {
         // given
+        CreateNoticeCommand.AttachmentCommand attachment = new CreateNoticeCommand.AttachmentCommand(
+                "file1.txt", "/tmp/file1.txt", 100L
+        );
+
         CreateNoticeCommand command = new CreateNoticeCommand(
                 "공지 제목",
                 "공지 내용",
                 "admin",
                 LocalDateTime.now(),
                 LocalDateTime.now().plusDays(1),
-                List.of()
+                List.of(attachment)
         );
 
         Notice savedNotice = Notice.builder()
@@ -54,6 +58,7 @@ class NoticeServiceTest {
                 .build();
 
         ReflectionTestUtils.setField(savedNotice, "id", 1L);
+        ReflectionTestUtils.setField(savedNotice, "hasAttachment", !command.getAttachments().isEmpty());
 
         given(noticeRepository.save(any(Notice.class)))
                 .willReturn(savedNotice);
@@ -63,6 +68,7 @@ class NoticeServiceTest {
 
         // then
         assertThat(noticeId).isEqualTo(1L);
+        assertThat(savedNotice.isHasAttachment()).isTrue();
     }
 
     @Test
@@ -127,6 +133,7 @@ class NoticeServiceTest {
         // then
         assertThat(notice.getTitle()).isEqualTo("수정된 제목");
         assertThat(notice.getAttachments()).hasSize(1);
+        assertThat(notice.isHasAttachment()).isTrue();
 
         verify(noticeRepository, never()).save(any());
     }
@@ -155,6 +162,41 @@ class NoticeServiceTest {
                 .hasMessageContaining("공지사항이 존재하지 않습니다.");
 
         verify(noticeRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("공지사항 수정 - 첨부파일 삭제 시 hasAttachment=false")
+    void updateNotice_removeAttachments_hasAttachmentFalse() {
+        // given
+        Long noticeId = 1L;
+
+        Notice notice = Notice.builder()
+                .title("기존 제목")
+                .content("기존 내용")
+                .author("admin")
+                .noticeStartAt(LocalDateTime.now())
+                .noticeEndAt(LocalDateTime.now().plusDays(1))
+                .build();
+
+        ReflectionTestUtils.setField(notice, "id", noticeId);
+        ReflectionTestUtils.setField(notice, "hasAttachment", true);
+
+        UpdateNoticeCommand updateCommand = new UpdateNoticeCommand(
+                noticeId,
+                "수정된 제목",
+                "수정된 내용",
+                LocalDateTime.now(),
+                LocalDateTime.now().plusDays(2),
+                List.of() // 첨부파일 삭제
+        );
+
+        given(noticeRepository.findById(noticeId)).willReturn(Optional.of(notice));
+
+        // when
+        noticeService.updateNotice(noticeId, updateCommand);
+
+        // then
+        assertThat(notice.isHasAttachment()).isFalse();
     }
 
     @Test
