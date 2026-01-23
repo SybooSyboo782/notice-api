@@ -18,6 +18,11 @@ configurations {
     compileOnly {
         extendsFrom annotationProcessor
     }
+
+    // Logback 제외(log4j2 와 충돌 이슈)
+    configureEach {
+        exclude group: 'org.springframework.boot', module: 'spring-boot-starter-logging'
+    }
 }
 
 repositories {
@@ -48,8 +53,7 @@ dependencies {
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.1'
 
     // 로깅
-    implementation 'org.springframework.boot:spring-boot-starter-log4j2:4.0.1'
-
+    runtimeOnly group: 'org.springframework.boot', module: 'spring-boot-starter-log4j2'
 
     //테스트에서 lombok 사용
     testCompileOnly 'org.projectlombok:lombok'
