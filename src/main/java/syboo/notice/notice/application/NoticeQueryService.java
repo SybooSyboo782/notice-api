@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import syboo.notice.notice.api.request.NoticeSearchCondition;
 import syboo.notice.notice.api.response.NoticeDetailResponse;
 import syboo.notice.notice.api.response.NoticeListResponse;
 import syboo.notice.notice.domain.Notice;
@@ -36,6 +37,14 @@ public class NoticeQueryService {
                 noticePage.getTotalElements(), noticePage.getNumberOfElements());
 
         return noticePage.map(this::toResponse);
+    }
+
+    /**
+     * 공지사항 검색 조회
+     */
+    public Page<NoticeListResponse> searchNotices(NoticeSearchCondition condition, Pageable pageable) {
+        log.info("공지사항 검색을 시작합니다. 조건: {}, 페이징: {}", condition, pageable);
+        return noticeRepository.search(condition, pageable);
     }
 
     /**
