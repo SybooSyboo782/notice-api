@@ -4,9 +4,11 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import syboo.notice.notice.api.request.CreateNoticeRequest;
 import syboo.notice.notice.api.request.UpdateNoticeRequest;
@@ -32,10 +34,11 @@ public class NoticeController {
      * @param request 공지사항 등록 요청 데이터 (JSON)
      * @return 생성된 공지사항의 식별자(ID)와 201 Created 상태코드
      */
-    @PostMapping
-    public ResponseEntity<Long> createNotice(@RequestBody @Valid CreateNoticeRequest request) {
-        log.info("공지사항 등록 요청: title='{}', author='{}', hasFiles={}",
-                request.title(), request.author(), !request.attachments().isEmpty());
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Long> createNotice(@ModelAttribute @Valid CreateNoticeRequest request) {
+        log.info("공지사항 등록 요청: title='{}', author='{}', fileCount={}",
+                request.title(), request.author(),
+                request.attachments() != null ? request.attachments().size() : 0);
 
         Long noticeId = noticeService.createNotice(toCommand(request));
 
@@ -54,11 +57,15 @@ public class NoticeController {
      * @param request 수정 요청 데이터
      * @return 204 No Content
      */
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> updateNotice(
             @PathVariable @Min(1) Long id,
-            @RequestBody @Valid UpdateNoticeRequest request) {
-        log.info("공지사항 수정 요청: id={}, title='{}'", id, request.title());
+            @ModelAttribute @Valid UpdateNoticeRequest request) {
+        log.info("공지사항 수정 요청: id={}, title='{}', newFiles={}, remainFiles={}",
+                id,
+                request.title(),
+                request.newAttachments() != null ? request.newAttachments().size() : 0,
+                request.remainAttachmentIds() != null ? request.remainAttachmentIds().size() : 0);
 
         noticeService.updateNotice(id, toUpdateCommand(id, request));
 
@@ -100,16 +107,8 @@ public class NoticeController {
      * 등록 요청 DTO를 서비스용 Command 객체로 매핑한다.
      */
     private CreateNoticeCommand toCommand(CreateNoticeRequest request) {
-        List<CreateNoticeCommand.AttachmentCommand> attachments =
-                Optional.ofNullable(request.attachments())
-                        .orElseGet(List::of) // null 안전성 확보
-                        .stream()
-                        .map(att -> new CreateNoticeCommand.AttachmentCommand(
-                                att.fileName(),
-                                att.storedPath(),
-                                att.fileSize()
-                        ))
-                        .toList();
+        List<MultipartFile> attachments = Optional.ofNullable(request.attachments())
+                .orElseGet(List::of);
 
         log.debug("첨부파일 변환 완료: {}개", attachments.size());
 
@@ -127,18 +126,16 @@ public class NoticeController {
      * 수정 요청 DTO를 서비스용 Command 객체로 매핑한다.
      */
     private UpdateNoticeCommand toUpdateCommand(Long id, UpdateNoticeRequest request) {
-        List<UpdateNoticeCommand.AttachmentCommand> attachments =
-                Optional.ofNullable(request.attachments())
-                        .orElseGet(List::of)
-                        .stream()
-                        .map(att -> new UpdateNoticeCommand.AttachmentCommand(
-                                att.fileName(),
-                                att.storedPath(),
-                                att.fileSize()
-                        ))
-                        .toList();
+        // 1. 새로 업로드된 파일들 추출
+        List<MultipartFile> newAttachments = Optional.ofNullable(request.newAttachments())
+                .orElseGet(List::of);
 
-        log.debug("공지사항[{}] 수정 첨부파일 변환 완료: {}개", id, attachments.size());
+        // 2. 유지할 기존 파일 ID 리스트 추출
+        List<Long> remainAttachmentIds = Optional.ofNullable(request.remainAttachmentIds())
+                .orElseGet(List::of);
+
+        log.debug("공지사항[{}] 수정 변환 - 신규 파일: {}개, 유지 ID: {}개",
+                id, newAttachments.size(), remainAttachmentIds.size());
 
         return new UpdateNoticeCommand(
                 id,
@@ -146,7 +143,8 @@ public class NoticeController {
                 request.content(),
                 request.noticeStartAt(),
                 request.noticeEndAt(),
-                attachments
+                newAttachments,
+                remainAttachmentIds
         );
     }
 }

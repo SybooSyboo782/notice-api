@@ -18,6 +18,7 @@ import java.util.List;
 @Transactional
 public class NoticeService {
     private final NoticeRepository noticeRepository;
+    private final NoticeFileService noticeFileService;
 
     /**
      * 신규 공지사항을 등록한다.
@@ -36,36 +37,13 @@ public class NoticeService {
                 .noticeEndAt(command.getNoticeEndAt())
                 .build();
 
-        // 첨부파일 처리 (내부에서 notice.addAttachment 호출 시 hasAttachment가 true로 자동 갱신됨)
-        processAttachments(command, notice);
+        // 첨부파일 물리 저장 및 엔티티 매핑
+        noticeFileService.storeFiles(command.getAttachments(), notice);
 
         Notice savedNotice = noticeRepository.save(notice);
 
         log.info("공지사항 저장 완료: id={}", savedNotice.getId());
         return savedNotice.getId();
-    }
-
-    /**
-     * 요청 데이터로부터 첨부파일 엔티티를 생성하여 공지사항에 추가한다.
-     * CascadeType.ALL 설정에 의해 Notice 저장 시 함께 저장된다.
-     */
-    private static void processAttachments(CreateNoticeCommand command, Notice notice) {
-        if (command.getAttachments() == null || command.getAttachments().isEmpty()) {
-            return;
-        }
-
-        for (CreateNoticeCommand.AttachmentCommand att : command.getAttachments()) {
-            // 추가될 때마다 hasAttachment = true 로 유지됨
-            notice.addAttachment(
-                    NoticeAttachment.builder()
-                            .fileName(att.getFileName())
-                            .storedPath(att.getStoredPath())
-                            .fileSize(att.getFileSize())
-                            .build()
-            );
-        }
-
-        log.debug("첨부파일 {}개 추가 완료", command.getAttachments().size());
     }
 
     /**
@@ -96,40 +74,20 @@ public class NoticeService {
                 command.getNoticeEndAt()
         );
 
-        // 첨부파일 교체 (removeAll 후 add 시점에 hasAttachment가 자동으로 false -> true/false로 동기화됨)
-        updateAttachments(notice, command.getAttachments());
+        // 1. 삭제 대상 필터링 및 처리 위임
+        List<NoticeAttachment> toRemove = notice.getAttachments().stream()
+                .filter(att -> !command.getRemainAttachmentIds().contains(att.getId()))
+                .toList();
+
+        noticeFileService.removeFiles(toRemove, notice);
+
+        // 2. 신규 파일 저장 위임
+        noticeFileService.storeFiles(command.getNewAttachments(), notice);
 
         log.info("공지사항 수정 완료: id={}", noticeId);
         // @Transactional에 의해 별도의 save() 호출 없이도 변경사항이 DB에 반영(Dirty Checking)됩니다.
     }
 
-    /**
-     * 첨부파일 리스트를 교체한다.
-     * <p>
-     * orphanRemoval = true 설정에 의해 기존 attachments 리스트를 clear() 하면
-     * 기존 데이터는 DB에서 자동으로 DELETE 된다.
-     *
-     * @param notice             수정할 공지사항 엔티티
-     * @param attachmentCommands 새롭게 등록할 첨부파일 정보 리스트
-     */
-    private void updateAttachments(Notice notice, List<UpdateNoticeCommand.AttachmentCommand> attachmentCommands) {
-        // 기존 첨부파일 전체 제거 (orphanRemoval = true에 의해 DB에서도 삭제됨)
-        notice.removeAllAttachments();
-
-        if (attachmentCommands != null && !attachmentCommands.isEmpty()) {
-            for (UpdateNoticeCommand.AttachmentCommand att : attachmentCommands) {
-                // 추가될 때마다 hasAttachment = true 로 유지됨
-                notice.addAttachment(
-                        NoticeAttachment.builder()
-                                .fileName(att.getFileName())
-                                .storedPath(att.getStoredPath())
-                                .fileSize(att.getFileSize())
-                                .build()
-                );
-            }
-            log.debug("첨부파일 교체 완료: {}개 신규 등록", attachmentCommands.size());
-        }
-    }
 
     /**
      * 공지사항을 삭제한다.
@@ -148,6 +106,8 @@ public class NoticeService {
                     log.error("공지사항 삭제 실패: 존재하지 않는 ID = {}", noticeId);
                     return new IllegalArgumentException("공지사항이 존재하지 않습니다.");
                 });
+
+        noticeFileService.deleteAllFiles(notice);
 
         noticeRepository.delete(notice);
 

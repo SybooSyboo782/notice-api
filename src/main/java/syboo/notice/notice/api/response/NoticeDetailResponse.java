@@ -14,8 +14,8 @@ public record NoticeDetailResponse(
 ) {
     public record AttachmentResponse(
             Long id,
-            String fileName,
-            String storedPath,
-            long fileSize
+            String originFileName,
+            long fileSize,
+            String contentType
     ) {}
 }

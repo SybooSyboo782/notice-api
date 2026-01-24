@@ -2,6 +2,7 @@ package syboo.notice.notice.application.command;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -16,13 +17,5 @@ public class CreateNoticeCommand {
     private LocalDateTime noticeStartAt;
     private LocalDateTime noticeEndAt;
 
-    private List<AttachmentCommand> attachments;
-
-    @Getter
-    @AllArgsConstructor
-    public static class AttachmentCommand {
-        private String fileName;
-        private String storedPath;
-        private long fileSize;
-    }
+    private final List<MultipartFile> attachments;
 }
