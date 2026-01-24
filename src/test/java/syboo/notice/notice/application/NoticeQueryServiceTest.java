@@ -81,7 +81,7 @@ class NoticeQueryServiceTest {
     }
 
     @Test
-    @DisplayName("성공: 존재하는 ID로 상세 조회 시 상세 정보와 빈 첨부파일 리스트를 반환한다")
+    @DisplayName("성공: 존재하는 ID로 상세 조회 시 상세 정보와 첨부파일 리스트를 반환한다")
     void getNoticeDetail_Success() {
         // given
         Long noticeId = 2L;
@@ -91,12 +91,17 @@ class NoticeQueryServiceTest {
 
         // 첨부파일 강제 주입
         NoticeAttachment attachment = NoticeAttachment.builder()
-                .fileName("file1.txt")
-                .storedPath("/path/file1.txt")
+                .originFileName("file1.txt")
+                .storedFileName("uuid-file1.txt")
                 .fileSize(123L)
+                .contentType("text/plain")
+                .checksum("SHA256_ABC123")
                 .build();
 
-        ReflectionTestUtils.setField(targetNotice, "attachments", List.of(attachment));
+        ReflectionTestUtils.setField(attachment, "id", 100L);
+
+        targetNotice.addAttachment(attachment);
+        ReflectionTestUtils.setField(targetNotice, "viewCount", 10L);
 
         given(noticeRepository.findById(noticeId)).willReturn(Optional.of(targetNotice));
 
@@ -106,13 +111,15 @@ class NoticeQueryServiceTest {
         // then
         assertThat(result.id()).isEqualTo(noticeId);
         assertThat(result.title()).isEqualTo("공지사항 제목 2");
-        assertThat(result.content()).isEqualTo("공지 내용입니다.");
 
         // 단위 테스트에서는 실제 DB 값이 안 변하므로 호출 여부가 가장 중요함
         verify(noticeRepository, times(1)).updateViewCount(noticeId);
 
+        // 첨부파일 검증
         assertThat(result.attachments()).hasSize(1);
-        assertThat(result.attachments().get(0).fileName()).isEqualTo("file1.txt");
+        assertThat(result.attachments().get(0).id()).isEqualTo(100L); // ID 검증 추가 가능
+        assertThat(result.attachments().get(0).originFileName()).isEqualTo("file1.txt");
+        assertThat(result.attachments().get(0).fileSize()).isEqualTo(123L);
     }
 
     @Test

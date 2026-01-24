@@ -3,6 +3,7 @@ package syboo.notice.notice.api.request;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,15 +22,9 @@ public record UpdateNoticeRequest(
         @NotNull(message = "공지 종료일은 필수입니다.")
         LocalDateTime noticeEndAt,
 
-        List<CreateNoticeRequest.AttachmentRequest> attachments
+        List<MultipartFile> newAttachments,
+
+        // 2. 유지할 기존 파일들의 ID 리스트 (이 리스트에 없는 기존 파일은 삭제 처리)
+        List<Long> remainAttachmentIds
 ) {
-        public record AttachmentRequest(
-                @NotBlank(message = "파일명은 필수입니다.")
-                String fileName,
-
-                @NotBlank(message = "저장 경로는 필수입니다.")
-                String storedPath,
-
-                long fileSize
-        ) {}
 }

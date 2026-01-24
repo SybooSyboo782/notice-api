@@ -3,6 +3,7 @@ package syboo.notice.notice.api.request;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -24,16 +25,7 @@ public record CreateNoticeRequest(
         @NotNull(message = "공지 종료일은 필수입니다.")
         LocalDateTime noticeEndAt,
 
-        List<AttachmentRequest> attachments
+        List<MultipartFile> attachments
 ) {
-    public record AttachmentRequest(
-            @NotBlank(message = "파일명은 필수입니다.")
-            String fileName,
-
-            @NotBlank(message = "저장 경로는 필수입니다.")
-            String storedPath,
-
-            long fileSize
-    ) {}
 }
 

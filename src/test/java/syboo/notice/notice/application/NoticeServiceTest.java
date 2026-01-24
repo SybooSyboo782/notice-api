@@ -6,10 +6,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
 import syboo.notice.notice.application.command.CreateNoticeCommand;
 import syboo.notice.notice.application.command.UpdateNoticeCommand;
 import syboo.notice.notice.domain.Notice;
+import syboo.notice.notice.domain.NoticeAttachment;
+import syboo.notice.notice.infra.storage.StorageService;
 import syboo.notice.notice.repository.NoticeRepository;
 
 import java.time.LocalDateTime;
@@ -19,9 +22,9 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class NoticeServiceTest {
@@ -32,13 +35,15 @@ class NoticeServiceTest {
     @Mock
     private NoticeRepository noticeRepository;
 
+    @Mock
+    private StorageService storageService;
+
     @Test
     @DisplayName("공지사항 등록 성공 - 첨부파일 포함")
     void createNotice() {
         // given
-        CreateNoticeCommand.AttachmentCommand attachment = new CreateNoticeCommand.AttachmentCommand(
-                "file1.txt", "/tmp/file1.txt", 100L
-        );
+        MockMultipartFile mockFile = new MockMultipartFile(
+                "attachments", "file1.txt", "text/plain", "hello".getBytes());
 
         CreateNoticeCommand command = new CreateNoticeCommand(
                 "공지 제목",
@@ -46,7 +51,7 @@ class NoticeServiceTest {
                 "admin",
                 LocalDateTime.now(),
                 LocalDateTime.now().plusDays(1),
-                List.of(attachment)
+                List.of(mockFile)
         );
 
         Notice savedNotice = Notice.builder()
@@ -107,7 +112,17 @@ class NoticeServiceTest {
                 .noticeEndAt(LocalDateTime.now().plusDays(1))
                 .build();
 
-        ReflectionTestUtils.setField(notice, "id", noticeId);
+        NoticeAttachment existing = NoticeAttachment.builder()
+                .originFileName("old.txt").storedFileName("old.txt")
+                .checksum("OLD").build();
+
+        ReflectionTestUtils.setField(existing, "id", 1L);
+        notice.addAttachment(existing);
+
+        given(noticeRepository.findById(noticeId)).willReturn(Optional.of(notice));
+
+        MockMultipartFile newFile = new MockMultipartFile(
+                "newAttachments", "new.txt", "text/plain", "new content".getBytes());
 
         given(noticeRepository.findById(noticeId))
                 .willReturn(Optional.of(notice));
@@ -118,13 +133,8 @@ class NoticeServiceTest {
                 "수정된 내용",
                 LocalDateTime.now(),
                 LocalDateTime.now().plusDays(2),
-                List.of(
-                        new UpdateNoticeCommand.AttachmentCommand(
-                                "file.txt",
-                                "/files/file.txt",
-                                1024L
-                        )
-                )
+                List.of(newFile),
+                List.of(1L)
         );
 
         // when
@@ -132,10 +142,10 @@ class NoticeServiceTest {
 
         // then
         assertThat(notice.getTitle()).isEqualTo("수정된 제목");
-        assertThat(notice.getAttachments()).hasSize(1);
+        assertThat(notice.getAttachments()).hasSize(2);
         assertThat(notice.isHasAttachment()).isTrue();
 
-        verify(noticeRepository, never()).save(any());
+        verify(storageService, times(1)).store(any(), anyString());
     }
 
     @Test
@@ -153,6 +163,7 @@ class NoticeServiceTest {
                 "내용",
                 LocalDateTime.now(),
                 LocalDateTime.now().plusDays(1),
+                List.of(),
                 List.of()
         );
 
@@ -178,8 +189,18 @@ class NoticeServiceTest {
                 .noticeEndAt(LocalDateTime.now().plusDays(1))
                 .build();
 
-        ReflectionTestUtils.setField(notice, "id", noticeId);
-        ReflectionTestUtils.setField(notice, "hasAttachment", true);
+        NoticeAttachment attachment = NoticeAttachment.builder()
+                .originFileName("old.txt")
+                .storedFileName("old-uuid.txt")
+                .fileSize(100L)
+                .contentType("text/plain")
+                .checksum("ABC").build();
+
+        ReflectionTestUtils.setField(attachment, "id", 100L);
+
+        notice.addAttachment(attachment);
+
+        given(noticeRepository.findById(noticeId)).willReturn(Optional.of(notice));
 
         UpdateNoticeCommand updateCommand = new UpdateNoticeCommand(
                 noticeId,
@@ -187,16 +208,19 @@ class NoticeServiceTest {
                 "수정된 내용",
                 LocalDateTime.now(),
                 LocalDateTime.now().plusDays(2),
-                List.of() // 첨부파일 삭제
+                List.of(),
+                List.of()
         );
-
-        given(noticeRepository.findById(noticeId)).willReturn(Optional.of(notice));
 
         // when
         noticeService.updateNotice(noticeId, updateCommand);
 
         // then
+        assertThat(notice.getAttachments()).isEmpty();
         assertThat(notice.isHasAttachment()).isFalse();
+
+        // 물리 파일 삭제 호출 확인
+        verify(storageService).delete("old-uuid.txt");
     }
 
     @Test
