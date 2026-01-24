@@ -16,6 +16,7 @@ import java.util.stream.IntStream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -86,6 +87,8 @@ class NoticeQueryServiceTest {
         Long noticeId = 2L;
         Notice targetNotice = savedNotices.get(1);
 
+        ReflectionTestUtils.setField(targetNotice, "viewCount", 10L);
+
         // 첨부파일 강제 주입
         NoticeAttachment attachment = NoticeAttachment.builder()
                 .fileName("file1.txt")
@@ -104,6 +107,10 @@ class NoticeQueryServiceTest {
         assertThat(result.id()).isEqualTo(noticeId);
         assertThat(result.title()).isEqualTo("공지사항 제목 2");
         assertThat(result.content()).isEqualTo("공지 내용입니다.");
+
+        // 단위 테스트에서는 실제 DB 값이 안 변하므로 호출 여부가 가장 중요함
+        verify(noticeRepository, times(1)).updateViewCount(noticeId);
+
         assertThat(result.attachments()).hasSize(1);
         assertThat(result.attachments().get(0).fileName()).isEqualTo("file1.txt");
     }
