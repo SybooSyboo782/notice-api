@@ -6,9 +6,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import syboo.notice.notice.api.response.NoticeDetailResponse;
 import syboo.notice.notice.api.response.NoticeListResponse;
 import syboo.notice.notice.domain.Notice;
 import syboo.notice.notice.repository.NoticeRepository;
+
+import java.util.List;
 
 @Slf4j
 @Service
@@ -52,6 +55,45 @@ public class NoticeQueryService {
                 notice.getCreatedDate(),
                 notice.getViewCount(),
                 notice.isHasAttachment()
+        );
+    }
+
+    /**
+     * 공지사항 상세 정보를 조회합니다.
+     *
+     * @param id 조회할 공지사항 ID
+     * @return 공지사항 상세 응답 DTO
+     * @throws IllegalArgumentException 존재하지 않는 ID일 경우 발생
+     */
+    public NoticeDetailResponse getNoticeDetail(Long id) {
+        log.info("공지사항 상세 조회 요청 - ID: {}", id);
+
+        Notice notice = noticeRepository.findById(id)
+                .orElseThrow(() -> {
+                    log.warn("공지사항을 찾을 수 없습니다. ID: {}", id);
+                    return new IllegalArgumentException("해당 공지사항이 존재하지 않습니다. ID: " + id);
+                });
+
+        return toDetailResponse(notice);
+    }
+
+    private NoticeDetailResponse toDetailResponse(Notice notice) {
+        List<NoticeDetailResponse.AttachmentResponse> attachments = notice.getAttachments().stream()
+                .map(attachment -> new NoticeDetailResponse.AttachmentResponse(
+                        attachment.getId(),
+                        attachment.getFileName(),
+                        attachment.getStoredPath(),
+                        attachment.getFileSize()
+                )).toList();
+
+        return new NoticeDetailResponse(
+                notice.getId(),
+                notice.getTitle(),
+                notice.getContent(),
+                notice.getAuthor(),
+                notice.getCreatedDate(),
+                notice.getViewCount(),
+                attachments
         );
     }
 }
