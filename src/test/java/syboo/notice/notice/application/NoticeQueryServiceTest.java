@@ -16,8 +16,11 @@ import java.util.stream.IntStream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
+
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.test.util.ReflectionTestUtils;
+import syboo.notice.notice.api.request.NoticeSearchCondition;
 import syboo.notice.notice.api.response.NoticeDetailResponse;
 import syboo.notice.notice.api.response.NoticeListResponse;
 import syboo.notice.notice.domain.Notice;
@@ -122,6 +125,34 @@ class NoticeQueryServiceTest {
                 )
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("해당 공지사항이 존재하지 않습니다.");
+    }
+
+    @Test
+    @DisplayName("검색 조건으로 조회 시 레포지토리를 호출하고 결과를 반환한다.")
+    void searchNotices_Success() {
+        // given
+        NoticeSearchCondition condition = new NoticeSearchCondition("제목", "내용", null, null);
+        Pageable pageable = PageRequest.of(0, 10, Sort.by("createdAt").descending());
+
+        // Mock 데이터 생성
+        NoticeListResponse response = new NoticeListResponse(
+                1L, "테스트 제목", "작성자", LocalDateTime.now(), 0L, false
+        );
+        Page<NoticeListResponse> mockPage = new PageImpl<>(List.of(response), pageable, 1);
+
+        // 레포지토리 동작 정의 (Stubbing)
+        given(noticeRepository.search(any(NoticeSearchCondition.class), any(Pageable.class)))
+                .willReturn(mockPage);
+
+        // when
+        Page<NoticeListResponse> result = noticeQueryService.searchNotices(condition, pageable);
+
+        // then
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).title()).isEqualTo("테스트 제목");
+
+        // 실제로 레포지토리의 search 메서드가 호출되었는지 확인
+        verify(noticeRepository).search(condition, pageable);
     }
 
     /**
