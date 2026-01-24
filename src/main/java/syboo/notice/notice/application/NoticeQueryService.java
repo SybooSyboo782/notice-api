@@ -96,9 +96,9 @@ public class NoticeQueryService {
         List<NoticeDetailResponse.AttachmentResponse> attachments = notice.getAttachments().stream()
                 .map(attachment -> new NoticeDetailResponse.AttachmentResponse(
                         attachment.getId(),
-                        attachment.getFileName(),
-                        attachment.getStoredPath(),
-                        attachment.getFileSize()
+                        attachment.getOriginFileName(),
+                        attachment.getFileSize(),
+                        attachment.getContentType()
                 )).toList();
 
         return new NoticeDetailResponse(
