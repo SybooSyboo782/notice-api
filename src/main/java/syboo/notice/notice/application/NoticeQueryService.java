@@ -74,8 +74,14 @@ public class NoticeQueryService {
      * @return 공지사항 상세 응답 DTO
      * @throws IllegalArgumentException 존재하지 않는 ID일 경우 발생
      */
+    @Transactional
     public NoticeDetailResponse getNoticeDetail(Long id) {
         log.info("공지사항 상세 조회 요청 - ID: {}", id);
+
+        // 조회수 증가
+        // ⚠️ 현재는 단일 DB 업데이트 방식
+        // 대규모 트래픽 환경에서는 Redis/벌크 업데이트 등 CQRS 분리 가능성을 고려
+        noticeRepository.updateViewCount(id);
 
         Notice notice = noticeRepository.findById(id)
                 .orElseThrow(() -> {
