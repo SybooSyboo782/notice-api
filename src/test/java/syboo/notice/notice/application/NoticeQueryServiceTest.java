@@ -10,6 +10,7 @@ import org.springframework.data.domain.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -17,8 +18,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.test.util.ReflectionTestUtils;
+import syboo.notice.notice.api.response.NoticeDetailResponse;
 import syboo.notice.notice.api.response.NoticeListResponse;
 import syboo.notice.notice.domain.Notice;
+import syboo.notice.notice.domain.NoticeAttachment;
 import syboo.notice.notice.repository.NoticeRepository;
 
 @ExtendWith(MockitoExtension.class)
@@ -71,6 +74,54 @@ class NoticeQueryServiceTest {
         // 두 번째 데이터 상세 검증 (첨부파일 있는 케이스)
         NoticeListResponse secondResponse = result.getContent().get(1);
         assertThat(secondResponse.hasAttachment()).isTrue(); // 2는 짝수이므로 true
+    }
+
+    @Test
+    @DisplayName("성공: 존재하는 ID로 상세 조회 시 상세 정보와 빈 첨부파일 리스트를 반환한다")
+    void getNoticeDetail_Success() {
+        // given
+        Long noticeId = 2L;
+        Notice targetNotice = savedNotices.get(1);
+
+        // 첨부파일 강제 주입
+        NoticeAttachment attachment = NoticeAttachment.builder()
+                .fileName("file1.txt")
+                .storedPath("/path/file1.txt")
+                .fileSize(123L)
+                .build();
+
+        ReflectionTestUtils.setField(targetNotice, "attachments", List.of(attachment));
+
+        given(noticeRepository.findById(noticeId)).willReturn(Optional.of(targetNotice));
+
+        // when
+        NoticeDetailResponse result = noticeQueryService.getNoticeDetail(noticeId);
+
+        // then
+        assertThat(result.id()).isEqualTo(noticeId);
+        assertThat(result.title()).isEqualTo("공지사항 제목 2");
+        assertThat(result.content()).isEqualTo("공지 내용입니다.");
+        assertThat(result.attachments()).hasSize(1);
+        assertThat(result.attachments().get(0).fileName()).isEqualTo("file1.txt");
+    }
+
+    @Test
+    @DisplayName("실패: 존재하지 않는 ID로 상세 조회 시 IllegalArgumentException이 발생한다")
+    void getNoticeDetail_Fail_NotFound() {
+        // given
+        // setUp에서 생성된 ID는 1~15이므로, 절대 존재할 수 없는 ID 999를 사용
+        Long nonExistentId = 999L;
+
+        given(noticeRepository.findById(nonExistentId)).willReturn(Optional.empty());
+
+        // when & then
+        // 1. 해당 로직 실행 시 특정 예외가 발생하는지 검증
+        // 2. 예외 메시지에 사용자님이 설정한 문구가 포함되어 있는지 확인
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                        noticeQueryService.getNoticeDetail(nonExistentId)
+                )
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("해당 공지사항이 존재하지 않습니다.");
     }
 
     /**

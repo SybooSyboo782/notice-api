@@ -8,8 +8,10 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import syboo.notice.notice.api.response.NoticeDetailResponse;
 import syboo.notice.notice.api.response.NoticeListResponse;
 import syboo.notice.notice.application.NoticeQueryService;
 
@@ -41,5 +43,17 @@ public class NoticeQueryController {
 
         // ResponseEntity를 사용하여 HTTP 상태 코드(200 OK)를 명시적으로 반환
         return ResponseEntity.ok(responses);
+    }
+
+    /**
+     * 공지사항 상세 정보를 조회합니다.
+     *
+     * @param id 공지사항 ID
+     * @return 공지사항 상세 정보
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<NoticeDetailResponse> getNotice(@PathVariable Long id) {
+        log.info("공지사항 상세 조회 API 호출 - ID: {}", id);
+        return ResponseEntity.ok(noticeQueryService.getNoticeDetail(id));
     }
 }
