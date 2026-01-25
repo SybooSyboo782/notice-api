@@ -3,9 +3,12 @@ package syboo.notice.notice.application;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import syboo.notice.common.exception.NoticeNotFoundException;
 import syboo.notice.notice.api.request.NoticeSearchCondition;
 import syboo.notice.notice.api.response.NoticeDetailResponse;
 import syboo.notice.notice.api.response.NoticeListResponse;
@@ -13,6 +16,7 @@ import syboo.notice.notice.domain.Notice;
 import syboo.notice.notice.repository.NoticeRepository;
 
 import java.util.List;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -29,9 +33,12 @@ public class NoticeQueryService {
      * @return 페이징 처리된 공지사항 목록 응답 DTO (NoticeListResponse)
      */
     public Page<NoticeListResponse> getNoticeList(Pageable pageable) {
-        log.info("공지사항 목록 조회를 시작합니다. 설정된 페이징 정보: {}", pageable);
+        // 안전한 Pageable로 변환
+        Pageable safePageable = validatePageable(pageable);
 
-        Page<Notice> noticePage = noticeRepository.findAll(pageable);
+        log.info("공지사항 목록 조회를 시작합니다. 설정된 페이징 정보: {}", safePageable);
+
+        Page<Notice> noticePage = noticeRepository.findAll(safePageable);
 
         log.debug("DB 조회 완료. 전체 데이터 수: {}, 현재 페이지 요소 수: {}",
                 noticePage.getTotalElements(), noticePage.getNumberOfElements());
@@ -43,8 +50,11 @@ public class NoticeQueryService {
      * 공지사항 검색 조회
      */
     public Page<NoticeListResponse> searchNotices(NoticeSearchCondition condition, Pageable pageable) {
-        log.info("공지사항 검색을 시작합니다. 조건: {}, 페이징: {}", condition, pageable);
-        return noticeRepository.search(condition, pageable);
+        // 안전한 Pageable로 변환
+        Pageable safePageable = validatePageable(pageable);
+
+        log.info("공지사항 검색을 시작합니다. 조건: {}, 페이징: {}", condition, safePageable);
+        return noticeRepository.search(condition, safePageable);
     }
 
     /**
@@ -79,14 +89,14 @@ public class NoticeQueryService {
         log.info("공지사항 상세 조회 요청 - ID: {}", id);
 
         // 조회수 증가
-        // ⚠️ 현재는 단일 DB 업데이트 방식
+        // 현재는 단일 DB 업데이트 방식
         // 대규모 트래픽 환경에서는 Redis/벌크 업데이트 등 CQRS 분리 가능성을 고려
         noticeRepository.updateViewCount(id);
 
         Notice notice = noticeRepository.findById(id)
                 .orElseThrow(() -> {
                     log.warn("공지사항을 찾을 수 없습니다. ID: {}", id);
-                    return new IllegalArgumentException("해당 공지사항이 존재하지 않습니다. ID: " + id);
+                    return new NoticeNotFoundException(id);
                 });
 
         return toDetailResponse(notice);
@@ -110,5 +120,33 @@ public class NoticeQueryService {
                 notice.getViewCount(),
                 attachments
         );
+    }
+
+    /**
+     * 전달된 Pageable 객체의 정렬 필드 유효성을 검증하고, 허용되지 않은 필드일 경우 기본 정렬로 대체합니다.
+     * <p>
+     * 클라이언트로부터 전달받은 정렬 기준(sort)이 엔티티의 필드명과 일치하지 않을 경우 발생하는
+     * {@link org.springframework.data.core.PropertyReferenceException}을 방지하기 위해 사용합니다.
+     * </p>
+     *
+     * @param pageable 클라이언트로부터 전달받은 페이징 및 정렬 정보
+     * @return 검증이 완료된 안전한 Pageable 객체 (허용되지 않은 필드 포함 시 createdDate 내림차순 적용)
+     */
+    private Pageable validatePageable(Pageable pageable) {
+        // 1. 허용된 정렬 필드 정의 (엔티티의 필드명과 일치해야 함)
+        Set<String> allowedProperties = Set.of("id", "title", "viewCount", "createdDate");
+
+        // 2. 클라이언트가 보낸 정렬 필드 중 허용되지 않은 것이 있는지 확인
+        boolean hasInvalidSort = pageable.getSort().stream()
+                .anyMatch(order -> !allowedProperties.contains(order.getProperty()));
+
+        // 3. 잘못된 필드가 있다면 'createdDate' 내림차순을 기본으로 하는 새로운 Pageable 반환
+        if (hasInvalidSort) {
+            log.warn("허용되지 않은 정렬 필드 감지됨. 기본 정렬로 대체합니다.");
+            return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+                    Sort.by("createdDate").descending());
+        }
+
+        return pageable;
     }
 }
