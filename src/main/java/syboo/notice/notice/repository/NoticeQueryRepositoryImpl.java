@@ -52,12 +52,26 @@ public class NoticeQueryRepositoryImpl implements NoticeQueryRepository {
                 );
 
         for (Sort.Order o : pageable.getSort()) {
-            PathBuilder<Notice> pathBuilder = new PathBuilder<>(notice.getType(), notice.getMetadata());
-            query.orderBy(new OrderSpecifier(
-                    o.isAscending() ? Order.ASC : Order.DESC,
-                    pathBuilder.get(o.getProperty())
-            ));
+            Order direction = o.isAscending() ? Order.ASC : Order.DESC;
+
+            OrderSpecifier<?> orderSpecifier = switch (o.getProperty()) {
+                case "id" -> new OrderSpecifier<>(direction, notice.id);
+                case "title" -> new OrderSpecifier<>(direction, notice.title);
+                case "viewCount" -> new OrderSpecifier<>(direction, notice.viewCount);
+                case "createdDate" -> new OrderSpecifier<>(direction, notice.createdDate);
+                default -> {
+                    log.warn("허용되지 않은 정렬 필드 요청 차단됨: {}", o.getProperty());
+                    yield null; // 허용되지 않은 필드는 무시
+                }
+            };
+
+            if (orderSpecifier != null) {
+                query.orderBy(orderSpecifier);
+            }
         }
+
+        // 정렬 조건이 없거나 잘못된 경우 기본 정렬 추가 (최신순)
+        query.orderBy(notice.createdDate.desc(), notice.id.desc());
 
         List<NoticeListResponse> content = query
                 .offset(pageable.getOffset())
