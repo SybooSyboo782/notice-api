@@ -1,5 +1,10 @@
 package syboo.notice.notice.api;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +31,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 
+@Tag(name = "Notice API", description = "공지사항 생성, 수정, 삭제 및 첨부파일 다운로드를 관리한다.")
 @Slf4j
 @RestController
 @RequestMapping("/api/notices")
@@ -41,6 +47,11 @@ public class NoticeController {
      * @param request 공지사항 등록 요청 데이터 (JSON)
      * @return 생성된 공지사항의 식별자(ID)와 201 Created 상태코드
      */
+    @Operation(summary = "신규 공지사항 등록", description = "제목, 내용, 공지 기간 및 첨부파일을 포함하여 새로운 공지사항을 생성한다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "등록 성공 (Location 헤더에 생성된 리소스 URI 포함)"),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청 파라미터 또는 유효성 검사 실패")
+    })
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Long> createNotice(@ModelAttribute @Valid CreateNoticeRequest request) {
         log.info("공지사항 등록 요청: title='{}', author='{}', fileCount={}",
@@ -64,6 +75,11 @@ public class NoticeController {
      * @param request 수정 요청 데이터
      * @return 204 No Content
      */
+    @Operation(summary = "기존 공지사항 수정", description = "공지사항의 정보와 첨부파일 구성을 수정한다. 파일은 새로 추가하거나 기존 파일을 선택적으로 유지할 수 있습다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "수정 성공"),
+            @ApiResponse(responseCode = "404", description = "수정할 공지사항을 찾을 수 없음")
+    })
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> updateNotice(
             @PathVariable @Min(1) Long id,
@@ -86,6 +102,11 @@ public class NoticeController {
      * @param id 삭제할 대상의 식별자
      * @return 204 No Content
      */
+    @Operation(summary = "공지사항 삭제", description = "공지사항과 관련된 모든 데이터(첨부파일 포함)를 삭제한다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "삭제 성공"),
+            @ApiResponse(responseCode = "404", description = "삭제할 공지사항을 찾을 수 없음")
+    })
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteNotice(@PathVariable @Min(1) Long id) {
         log.info("공지사항 삭제 요청: id={}", id);
@@ -162,6 +183,15 @@ public class NoticeController {
      * @param fileId 첨부파일 식별자
      * @return 파일 바이너리 리소스를 포함한 {@link ResponseEntity}
      */
+    @Operation(summary = "첨부파일 다운로드", description = "파일 식별자를 통해 안전하게 파일을 다운로드합니다. 보안(Path Traversal 방어) 및 한글 파일명 인코딩 처리가 포함되어 있습니다.")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200", description = "파일 다운로드 성공",
+                    content = @Content(mediaType = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+            ),
+            @ApiResponse(responseCode = "403", description = "비정상적인 경로 접근 (보안 위반)"),
+            @ApiResponse(responseCode = "404", description = "파일을 찾을 수 없음")
+    })
     @GetMapping("/attachments/{fileId}")
     public ResponseEntity<Resource> downloadFile(@PathVariable @Min(1) Long fileId) {
         log.info("첨부파일 다운로드 API 호출: fileId={}", fileId);
