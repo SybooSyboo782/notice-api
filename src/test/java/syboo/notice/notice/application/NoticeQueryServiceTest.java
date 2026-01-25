@@ -39,6 +39,8 @@ class NoticeQueryServiceTest {
 
     private List<Notice> savedNotices;
 
+    private final LocalDateTime fixedNow = LocalDateTime.of(2026, 1, 25, 20, 0);
+
     @BeforeEach
     void setUp() {
         // 테스트용 데이터 15개를 미리 생성해둡니다.
@@ -150,7 +152,7 @@ class NoticeQueryServiceTest {
 
         // Mock 데이터 생성
         NoticeListResponse response = new NoticeListResponse(
-                1L, "테스트 제목", "작성자", LocalDateTime.now(), 0L, false
+                1L, "테스트 제목", "작성자", fixedNow, 0L, false
         );
         Page<NoticeListResponse> mockPage = new PageImpl<>(List.of(response), pageable, 1);
 
@@ -177,14 +179,14 @@ class NoticeQueryServiceTest {
                 .title(title)
                 .content("공지 내용입니다.")
                 .author("작성자")
-                .noticeStartAt(LocalDateTime.now())
-                .noticeEndAt(LocalDateTime.now().plusDays(7))
+                .noticeStartAt(fixedNow)
+                .noticeEndAt(fixedNow.plusDays(7))
                 .build();
 
         // JPA 가 관리하는 필드들을 Reflection 으로 강제 주입
         ReflectionTestUtils.setField(notice, "id", id);
         ReflectionTestUtils.setField(notice, "hasAttachment", hasAttachment);
-        ReflectionTestUtils.setField(notice, "createdDate", LocalDateTime.now().minusHours(id)); // 정렬 테스트를 위해 차등 부여
+        ReflectionTestUtils.setField(notice, "createdDate", fixedNow.minusHours(id)); // 정렬 테스트를 위해 차등 부여
 
         return notice;
     }

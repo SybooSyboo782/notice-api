@@ -9,10 +9,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class NoticeTest {
+    private final LocalDateTime fixedNow = LocalDateTime.of(2026, 1, 25, 20, 0);
+
     @Test
     void create_notice_success() {
         // given
-        LocalDateTime startAt = LocalDateTime.now();
+        LocalDateTime startAt = fixedNow;
         LocalDateTime endAt = startAt.plusDays(1);
 
         // when
@@ -32,19 +34,20 @@ class NoticeTest {
     @Test
     void create_notice_fail_when_end_before_start() {
         // given
-        LocalDateTime startAt = LocalDateTime.now();
+        LocalDateTime startAt = fixedNow;
         LocalDateTime endAt = startAt.minusDays(1);
 
+        Notice.NoticeBuilder noticeBuilder = Notice.builder()
+                .title("title")
+                .content("content")
+                .author("admin")
+                .noticeStartAt(startAt)
+                .noticeEndAt(endAt);
+
         // when & then
-        assertThatThrownBy(() ->
-                Notice.builder()
-                        .title("title")
-                        .content("content")
-                        .author("admin")
-                        .noticeStartAt(startAt)
-                        .noticeEndAt(endAt)
-                        .build()
-        ).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(noticeBuilder::build)
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("공지 종료일");
     }
 
     @Test
@@ -56,8 +59,8 @@ class NoticeTest {
         notice.update(
                 "new title",
                 "new content",
-                LocalDateTime.now(),
-                LocalDateTime.now().plusDays(1)
+                fixedNow,
+                fixedNow.plusDays(1)
         );
 
         // then
@@ -123,8 +126,8 @@ class NoticeTest {
                 .title("title")
                 .content("content")
                 .author("admin")
-                .noticeStartAt(LocalDateTime.now())
-                .noticeEndAt(LocalDateTime.now().plusDays(1))
+                .noticeStartAt(fixedNow)
+                .noticeEndAt(fixedNow.plusDays(1))
                 .build();
     }
 
