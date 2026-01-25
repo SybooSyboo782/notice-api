@@ -12,7 +12,6 @@ import syboo.notice.notice.application.command.CreateNoticeCommand;
 import syboo.notice.notice.application.command.UpdateNoticeCommand;
 import syboo.notice.notice.domain.Notice;
 import syboo.notice.notice.domain.NoticeAttachment;
-import syboo.notice.notice.infra.storage.StorageService;
 import syboo.notice.notice.repository.NoticeRepository;
 
 import java.time.LocalDateTime;
@@ -22,7 +21,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
@@ -36,7 +34,9 @@ class NoticeServiceTest {
     private NoticeRepository noticeRepository;
 
     @Mock
-    private StorageService storageService;
+    private NoticeFileService noticeFileService;
+
+    private final LocalDateTime fixedNow = LocalDateTime.of(2026, 1, 25, 20, 0);
 
     @Test
     @DisplayName("공지사항 등록 성공 - 첨부파일 포함")
@@ -49,8 +49,8 @@ class NoticeServiceTest {
                 "공지 제목",
                 "공지 내용",
                 "admin",
-                LocalDateTime.now(),
-                LocalDateTime.now().plusDays(1),
+                fixedNow,
+                fixedNow.plusDays(1),
                 List.of(mockFile)
         );
 
@@ -84,8 +84,8 @@ class NoticeServiceTest {
                 "제목",
                 "내용",
                 "admin",
-                LocalDateTime.now(),
-                LocalDateTime.now().minusDays(1),
+                fixedNow,
+                fixedNow.minusDays(1),
                 null
         );
 
@@ -108,8 +108,8 @@ class NoticeServiceTest {
                 .title("기존 제목")
                 .content("기존 내용")
                 .author("admin")
-                .noticeStartAt(LocalDateTime.now())
-                .noticeEndAt(LocalDateTime.now().plusDays(1))
+                .noticeStartAt(fixedNow)
+                .noticeEndAt(fixedNow.plusDays(1))
                 .build();
 
         NoticeAttachment existing = NoticeAttachment.builder()
@@ -131,8 +131,8 @@ class NoticeServiceTest {
                 noticeId,
                 "수정된 제목",
                 "수정된 내용",
-                LocalDateTime.now(),
-                LocalDateTime.now().plusDays(2),
+                fixedNow,
+                fixedNow.plusDays(2),
                 List.of(newFile),
                 List.of(1L)
         );
@@ -142,10 +142,9 @@ class NoticeServiceTest {
 
         // then
         assertThat(notice.getTitle()).isEqualTo("수정된 제목");
-        assertThat(notice.getAttachments()).hasSize(2);
-        assertThat(notice.isHasAttachment()).isTrue();
 
-        verify(storageService, times(1)).store(any(), anyString());
+        verify(noticeFileService, times(1)).storeFiles(anyList(), eq(notice));
+        verify(noticeFileService, times(1)).removeFiles(anyList(), eq(notice));
     }
 
     @Test
@@ -161,8 +160,8 @@ class NoticeServiceTest {
                 noticeId,
                 "제목",
                 "내용",
-                LocalDateTime.now(),
-                LocalDateTime.now().plusDays(1),
+                fixedNow,
+                fixedNow.plusDays(1),
                 List.of(),
                 List.of()
         );
@@ -185,8 +184,8 @@ class NoticeServiceTest {
                 .title("기존 제목")
                 .content("기존 내용")
                 .author("admin")
-                .noticeStartAt(LocalDateTime.now())
-                .noticeEndAt(LocalDateTime.now().plusDays(1))
+                .noticeStartAt(fixedNow)
+                .noticeEndAt(fixedNow.plusDays(1))
                 .build();
 
         NoticeAttachment attachment = NoticeAttachment.builder()
@@ -206,8 +205,8 @@ class NoticeServiceTest {
                 noticeId,
                 "수정된 제목",
                 "수정된 내용",
-                LocalDateTime.now(),
-                LocalDateTime.now().plusDays(2),
+                fixedNow,
+                fixedNow.plusDays(2),
                 List.of(),
                 List.of()
         );
@@ -216,11 +215,8 @@ class NoticeServiceTest {
         noticeService.updateNotice(noticeId, updateCommand);
 
         // then
-        assertThat(notice.getAttachments()).isEmpty();
-        assertThat(notice.isHasAttachment()).isFalse();
-
         // 물리 파일 삭제 호출 확인
-        verify(storageService).delete("old-uuid.txt");
+        verify(noticeFileService, times(1)).removeFiles(anyList(), eq(notice));
     }
 
     @Test
@@ -233,8 +229,8 @@ class NoticeServiceTest {
                 .title("공지")
                 .content("내용")
                 .author("admin")
-                .noticeStartAt(LocalDateTime.now())
-                .noticeEndAt(LocalDateTime.now().plusDays(1))
+                .noticeStartAt(fixedNow)
+                .noticeEndAt(fixedNow.plusDays(1))
                 .build();
 
         ReflectionTestUtils.setField(notice, "id", noticeId);

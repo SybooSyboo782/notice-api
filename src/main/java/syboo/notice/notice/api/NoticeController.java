@@ -4,19 +4,25 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import org.springframework.web.util.UriUtils;
 import syboo.notice.notice.api.request.CreateNoticeRequest;
 import syboo.notice.notice.api.request.UpdateNoticeRequest;
+import syboo.notice.notice.api.response.FileDownloadResponse;
+import syboo.notice.notice.application.NoticeFileService;
 import syboo.notice.notice.application.NoticeService;
 import syboo.notice.notice.application.command.CreateNoticeCommand;
 import syboo.notice.notice.application.command.UpdateNoticeCommand;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,6 +34,7 @@ import java.util.Optional;
 public class NoticeController {
 
     private final NoticeService noticeService;
+    private final NoticeFileService noticeFileService;
 
     /**
      * 신규 공지사항을 등록한다.
@@ -146,5 +153,35 @@ public class NoticeController {
                 newAttachments,
                 remainAttachmentIds
         );
+    }
+
+    /**
+     * 첨부파일을 다운로드한다.
+     * 한글 파일명 깨짐 방지를 위해 UTF-8 인코딩을 적용함.
+     *
+     * @param fileId 첨부파일 식별자
+     * @return 파일 바이너리 리소스를 포함한 {@link ResponseEntity}
+     */
+    @GetMapping("/attachments/{fileId}")
+    public ResponseEntity<Resource> downloadFile(@PathVariable Long fileId) {
+        log.info("첨부파일 다운로드 API 호출: fileId={}", fileId);
+
+        // Record의 필드 접근은 메서드 호출 방식을 사용 (get 접미사 없음)
+        FileDownloadResponse response = noticeFileService.downloadFile(fileId);
+
+        // 한글 파일명 깨짐 방지 인코딩 (StandardCharsets.UTF_8 사용)
+        String encodedFileName = UriUtils.encode(response.originFileName(), StandardCharsets.UTF_8);
+
+        // RFC 5987 규격에 따른 Content-Disposition 설정
+        String contentDisposition =
+                "attachment; filename=\"" + encodedFileName + "\"; " +
+                        "filename*=UTF-8''" + encodedFileName;
+
+        log.debug("파일 다운로드 응답 생성 완료: originName='{}'", response.originFileName());
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition)
+                .contentType(MediaType.APPLICATION_OCTET_STREAM) // 이진 데이터 스트림 명시
+                .body(response.resource());
     }
 }

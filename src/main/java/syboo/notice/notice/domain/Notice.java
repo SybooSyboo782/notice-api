@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import syboo.notice.common.domain.baseentity.BaseEntity;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -108,6 +109,20 @@ public class Notice extends BaseEntity {
     public void removeAllAttachments() {
         attachments.clear();
         updateAttachmentStatus();
+    }
+
+    /**
+     * 현재 시점을 기준으로 해당 공지사항이 조회 가능한 기간인지 확인한다.
+     * <p>
+     * 시작일시 <= 현재시간 <= 종료일시
+     * </p>
+     * @param clock 시간 측정을 위한 Clock 객체
+     * @return 조회 가능 여부
+     */
+    public boolean isViewable(Clock clock) {
+        LocalDateTime now = LocalDateTime.now(clock);
+        return (noticeStartAt == null || !now.isBefore(noticeStartAt))
+                && (noticeEndAt == null || !now.isAfter(noticeEndAt));
     }
 
     /**

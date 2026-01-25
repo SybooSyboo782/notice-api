@@ -1,5 +1,6 @@
 package syboo.notice.notice.infra.storage;
 
+import org.springframework.core.io.Resource;
 import org.springframework.web.multipart.MultipartFile;
 
 public interface StorageService {
@@ -12,4 +13,9 @@ public interface StorageService {
      * 저장된 파일을 삭제한다.
      */
     void delete(String storedFileName);
+
+    /**
+     * 리소스 로드 메서드
+     */
+    Resource loadAsResource(String storedFileName);
 }
