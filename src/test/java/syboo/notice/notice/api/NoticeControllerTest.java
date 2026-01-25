@@ -2,31 +2,15 @@ package syboo.notice.notice.api;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.json.AutoConfigureJson;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
-import syboo.notice.config.TestClockConfig;
+import syboo.notice.IntegrationTestSupport;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@AutoConfigureJson
-@Transactional
-@Import(TestClockConfig.class)
-class NoticeControllerTest {
-
-    @Autowired
-    private MockMvc mockMvc;
-
+class NoticeControllerTest extends IntegrationTestSupport {
     @Test
     @DisplayName("해피 케이스: 공지사항의 생성부터 수정, 삭제까지의 전체 생명주기 검증")
     void notice_Full_Lifecycle_HappyPath() throws Exception {

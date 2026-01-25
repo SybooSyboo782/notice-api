@@ -59,6 +59,7 @@ dependencies {
     runtimeOnly "org.springframework.boot:spring-boot-starter-log4j2"
 
     //테스트에서 lombok 사용
+    runtimeOnly 'com.h2database:h2'
     testCompileOnly 'org.projectlombok:lombok'
     testAnnotationProcessor 'org.projectlombok:lombok'
 }
