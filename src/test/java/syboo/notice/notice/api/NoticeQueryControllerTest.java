@@ -4,14 +4,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.json.AutoConfigureJson;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
+import syboo.notice.IntegrationTestSupport;
 import syboo.notice.config.TestClockConfig;
 import syboo.notice.notice.domain.Notice;
 import syboo.notice.notice.repository.NoticeRepository;
@@ -23,15 +18,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest // 실제 어플리케이션 컨텍스트를 로드함
-@AutoConfigureMockMvc // MockMvc를 자동으로 설정함
-@AutoConfigureJson
-@Transactional
-@Import(TestClockConfig.class)
-class NoticeQueryControllerTest {
-    @Autowired
-    private MockMvc mockMvc;
-
+class NoticeQueryControllerTest extends IntegrationTestSupport {
     @Autowired
     private NoticeRepository noticeRepository;
 
