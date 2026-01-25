@@ -103,9 +103,14 @@ public class LocalStorageService implements StorageService{
     @Override
     public Resource loadAsResource(String storedFileName) {
         try {
-            Path file = rootLocation.resolve(storedFileName).normalize();
+            // rootLocation을 절대 경로로 변환하고 정규화
+            Path rootAbsPath = rootLocation.toAbsolutePath().normalize();
 
-            if (!file.startsWith(rootLocation)) {
+            // 파일 경로도 절대 경로로 변환하고 정규화
+            Path file = rootAbsPath.resolve(storedFileName).toAbsolutePath().normalize();
+
+            // 절대 경로끼리 비교
+            if (!file.startsWith(rootAbsPath)) {
                 log.error("Path Traversal 시도 감지: {}", storedFileName);
                 throw new FileSecurityException("허용되지 않은 파일 접근입니다.");
             }

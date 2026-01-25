@@ -4,9 +4,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import java.util.HashMap;
@@ -50,8 +52,23 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .badRequest()
                 .body(Map.of(
-                        ERROR, "BAD_REQUEST",
+                        ERROR, "INVALID_INPUT_VALUE",
                         MESSAGE, e.getMessage()
+                ));
+    }
+
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public ResponseEntity<Map<String, String>> handleHandlerMethodValidationException(HandlerMethodValidationException ex) {
+        // 1. 서버 내부 로그에는 상세히 남김 (보안 이슈 없음)
+        log.warn("유효성 검사 실패 - 상세내용: {}", ex.getMessage());
+
+        String safeMessage = "입력 파라미터가 유효하지 않습니다.";
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(Map.of(
+                        ERROR, "INVALID_INPUT",
+                        MESSAGE, safeMessage
                 ));
     }
 
@@ -79,6 +96,21 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.NOT_FOUND)
                 .body(Map.of(
                         ERROR, "FILE_NOT_FOUND",
+                        MESSAGE, e.getMessage()
+                ));
+    }
+
+    /**
+     * [404] 리소스를 찾을 수 없는 경우 (조회/수정/삭제 대상 부재)
+     */
+    @ExceptionHandler(NoticeNotFoundException.class)
+    protected ResponseEntity<Map<String, Object>> handleNoticeNotFoundException(NoticeNotFoundException e) {
+        log.warn("리소스 조회 실패: {}", e.getMessage());
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(Map.of(
+                        ERROR, "NOT_FOUND",
                         MESSAGE, e.getMessage()
                 ));
     }

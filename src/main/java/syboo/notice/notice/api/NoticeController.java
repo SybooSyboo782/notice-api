@@ -163,7 +163,7 @@ public class NoticeController {
      * @return 파일 바이너리 리소스를 포함한 {@link ResponseEntity}
      */
     @GetMapping("/attachments/{fileId}")
-    public ResponseEntity<Resource> downloadFile(@PathVariable Long fileId) {
+    public ResponseEntity<Resource> downloadFile(@PathVariable @Min(1) Long fileId) {
         log.info("첨부파일 다운로드 API 호출: fileId={}", fileId);
 
         // Record의 필드 접근은 메서드 호출 방식을 사용 (get 접미사 없음)

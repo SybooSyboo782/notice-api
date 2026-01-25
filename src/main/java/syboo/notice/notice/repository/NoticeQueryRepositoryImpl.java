@@ -47,7 +47,7 @@ public class NoticeQueryRepositoryImpl implements NoticeQueryRepository {
                 ))
                 .from(notice)
                 .where(
-                        combineSearch(cond.title(), cond.content()),
+                        combineSearch(cond.query(), cond.searchType()),
                         dateBetween(cond.startDate(), cond.endDate())
                 );
 
@@ -83,7 +83,7 @@ public class NoticeQueryRepositoryImpl implements NoticeQueryRepository {
                 .select(notice.count())
                 .from(notice)
                 .where(
-                        combineSearch(cond.title(), cond.content()),
+                        combineSearch(cond.query(), cond.searchType()),
                         dateBetween(cond.startDate(), cond.endDate())
                 );
 
@@ -95,21 +95,18 @@ public class NoticeQueryRepositoryImpl implements NoticeQueryRepository {
      * - 제목과 내용 파라미터가 모두 전달되면 (제목 OR 내용) 조건으로 검색 (요구사항: 제목+내용)
      * - 제목만 전달되면 제목에서만 검색
      */
-    private BooleanExpression combineSearch(String title, String content) {
-        boolean hasTitle = StringUtils.hasText(title);
-        boolean hasContent = StringUtils.hasText(content);
+    private BooleanExpression combineSearch(String query, String searchType) {
+        if (!StringUtils.hasText(query)) {
+            return null;
+        }
 
-        if (hasTitle && hasContent) {
-            // "제목 + 내용" 검색 (OR 조건)
-            return notice.title.contains(title).or(notice.content.contains(content));
+        // "제목 + 내용" 검색
+        if ("TITLE_CONTENT".equals(searchType)) {
+            return notice.title.contains(query).or(notice.content.contains(query));
         }
-        if (hasTitle) {
-            return notice.title.contains(title);
-        }
-        if (hasContent) {
-            return notice.content.contains(content);
-        }
-        return null;
+
+        // 기본값: "제목" 검색
+        return notice.title.contains(query);
     }
 
     private BooleanExpression dateBetween(LocalDateTime start, LocalDateTime end) {

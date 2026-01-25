@@ -21,6 +21,7 @@ import static org.mockito.Mockito.verify;
 
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.test.util.ReflectionTestUtils;
+import syboo.notice.common.exception.NoticeNotFoundException;
 import syboo.notice.notice.api.request.NoticeSearchCondition;
 import syboo.notice.notice.api.response.NoticeDetailResponse;
 import syboo.notice.notice.api.response.NoticeListResponse;
@@ -125,7 +126,7 @@ class NoticeQueryServiceTest {
     }
 
     @Test
-    @DisplayName("실패: 존재하지 않는 ID로 상세 조회 시 IllegalArgumentException이 발생한다")
+    @DisplayName("실패: 존재하지 않는 ID로 상세 조회 시 NoticeNotFoundException 발생한다")
     void getNoticeDetail_Fail_NotFound() {
         // given
         // setUp에서 생성된 ID는 1~15이므로, 절대 존재할 수 없는 ID 999를 사용
@@ -139,16 +140,15 @@ class NoticeQueryServiceTest {
         org.assertj.core.api.Assertions.assertThatThrownBy(() ->
                         noticeQueryService.getNoticeDetail(nonExistentId)
                 )
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("해당 공지사항이 존재하지 않습니다.");
+                .isInstanceOf(NoticeNotFoundException.class);
     }
 
     @Test
     @DisplayName("검색 조건으로 조회 시 레포지토리를 호출하고 결과를 반환한다.")
     void searchNotices_Success() {
         // given
-        NoticeSearchCondition condition = new NoticeSearchCondition("제목", "내용", null, null);
-        Pageable pageable = PageRequest.of(0, 10, Sort.by("createdAt").descending());
+        NoticeSearchCondition condition = new NoticeSearchCondition("제목", "", null, null);
+        Pageable pageable = PageRequest.of(0, 10, Sort.by("createdDate").descending());
 
         // Mock 데이터 생성
         NoticeListResponse response = new NoticeListResponse(

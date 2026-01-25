@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import syboo.notice.common.exception.NoticeNotFoundException;
 import syboo.notice.notice.application.command.CreateNoticeCommand;
 import syboo.notice.notice.application.command.UpdateNoticeCommand;
 import syboo.notice.notice.domain.Notice;
@@ -55,7 +56,7 @@ public class NoticeService {
      *
      * @param noticeId 수정할 공지사항의 식별자
      * @param command  수정할 데이터가 담긴 Command 객체
-     * @throws IllegalArgumentException 존재하지 않는 ID이거나 공지 기간 유효성 검증 실패 시 발생
+     * @throws NoticeNotFoundException 존재하지 않는 ID이거나 공지 기간 유효성 검증 실패 시 발생
      */
     public void updateNotice(Long noticeId, UpdateNoticeCommand command) {
         log.info("공지사항 수정 시작: id={}, title='{}'", noticeId, command.getTitle());
@@ -63,7 +64,7 @@ public class NoticeService {
         Notice notice = noticeRepository.findById(noticeId)
                 .orElseThrow(() -> {
                     log.error("공지사항 수정 실패: 존재하지 않는 ID = {}", noticeId);
-                    return new IllegalArgumentException("공지사항이 존재하지 않습니다.");
+                    return new NoticeNotFoundException(noticeId);
                 });
 
         // 기본 정보 수정 (내부에서 기간 검증 수행)
@@ -96,7 +97,7 @@ public class NoticeService {
      * 해당 공지사항과 연관된 모든 첨부파일(NoticeAttachment) 데이터도 함께 삭제된다.
      *
      * @param noticeId 삭제할 공지사항의 식별자
-     * @throws IllegalArgumentException 존재하지 않는 ID일 경우 발생
+     * @throws NoticeNotFoundException 존재하지 않는 ID일 경우 발생
      */
     public void deleteNotice(Long noticeId) {
         log.info("공지사항 삭제 요청: id={}", noticeId);
@@ -104,7 +105,7 @@ public class NoticeService {
         Notice notice = noticeRepository.findById(noticeId)
                 .orElseThrow(() -> {
                     log.error("공지사항 삭제 실패: 존재하지 않는 ID = {}", noticeId);
-                    return new IllegalArgumentException("공지사항이 존재하지 않습니다.");
+                    return new NoticeNotFoundException(noticeId);
                 });
 
         noticeFileService.deleteAllFiles(notice);

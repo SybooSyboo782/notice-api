@@ -1,5 +1,6 @@
 package syboo.notice.notice.api;
 
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -66,7 +67,7 @@ public class NoticeQueryController {
      * @return 공지사항 상세 정보
      */
     @GetMapping("/{id}")
-    public ResponseEntity<NoticeDetailResponse> getNotice(@PathVariable Long id) {
+    public ResponseEntity<NoticeDetailResponse> getNotice(@PathVariable @Min(1) Long id) {
         log.info("공지사항 상세 조회 API 호출 - ID: {}", id);
         return ResponseEntity.ok(noticeQueryService.getNoticeDetail(id));
     }
