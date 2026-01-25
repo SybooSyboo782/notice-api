@@ -163,6 +163,7 @@ application.yml
 application-*.yml
 application.properties
 application-*.properties
+!src/test/resources/application-test.yml
 
 ########################################
 ### Environment / Secret ###
